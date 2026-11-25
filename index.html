@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Laboratorio di revisione</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+/*
+VOICE: sobrio, da quaderno di correzione; leggibile dal fondo dell'aula sulla LIM
+IDEA: il compito corretto con la penna rossa: errore sottolineato, correzione a margine, regola
+PICTURE: la frase in grande al centro, che si trasforma passo dopo passo
+COLOUR and TYPE: foglio bianco, inchiostro scuro, penna rossa per l'errore, verde per la correzione; Source Serif per le frasi, Atkinson per il resto
+LAYOUT: schede in alto, regola a sinistra e esercizio a destra; su schermi stretti tutto in colonna
+*/
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#15181c);--paper:light-dark(#f6f7f9,#1d2126);--ink:light-dark(#17202b,#eceef1);--dim:light-dark(#5a6470,#a3abb5);--line:light-dark(#d9dde3,#343a42);--red:light-dark(#c62828,#ff7b72);--redbg:light-dark(#fde8e7,#3a1f1f);--green:light-dark(#1b7a45,#6fd39a);--greenbg:light-dark(#e3f4ea,#173225);--blue:light-dark(#1f4fa3,#8db4ff)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 "Atkinson Hyperlegible",system-ui,sans-serif;overflow-x:clip}
+header{padding:22px max(4vw,16px) 10px}
+h1{margin:0;font-size:clamp(28px,3.6vw,40px);line-height:1.1}
+header p{margin:6px 0 0;color:var(--dim);max-width:70ch}
+nav{display:flex;gap:6px;overflow-x:auto;padding:10px max(4vw,16px);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:2}
+nav button{flex:none}
+button{font:inherit;color:inherit;background:transparent;border:1.5px solid var(--line);border-radius:8px;min-height:44px;padding:6px 14px;cursor:pointer}
+button:hover{border-color:var(--ink)}
+button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+button[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:disabled{opacity:.35;cursor:default}
+.wrap{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:clamp(18px,3vw,40px);padding:24px max(4vw,16px) 40px;max-width:1400px}
+.rule{background:var(--paper);border-radius:12px;padding:18px 20px;align-self:start}
+.rule h2{margin:0 0 10px;font-size:22px}
+.rule ul{margin:0;padding-left:20px}
+.rule li{margin:0 0 9px}
+.rule b{color:var(--blue)}
+.ex{display:flex;flex-direction:column;gap:14px}
+.count{color:var(--dim);font-size:15px}
+.task{font-weight:700;font-size:clamp(18px,1.9vw,21px);margin:0}
+.sent{font:400 clamp(24px,3vw,36px)/1.45 "Source Serif 4",Georgia,serif;margin:0;padding:18px 22px;border-left:4px solid var(--line);white-space:pre-line}
+.err{color:var(--red);text-decoration:underline wavy var(--red);text-underline-offset:6px;text-decoration-thickness:2px;background:var(--redbg);border-radius:4px;padding:0 2px}
+.fix{color:var(--green);background:var(--greenbg);border-radius:4px;padding:0 3px;font-weight:600}
+.steps{display:flex;flex-wrap:wrap;gap:8px}
+.steps .done{border-color:var(--green);color:var(--green)}
+.panel{display:none;border-radius:12px;padding:14px 18px}
+.panel.on{display:block}
+.panel h3{margin:0 0 4px;font-size:15px;color:var(--dim);font-weight:700}
+.corr{background:var(--greenbg)}
+.corr .sent{border-left-color:var(--green);padding:6px 0 6px 18px}
+.corr .fix{background:transparent;text-decoration:underline;text-underline-offset:5px}
+.why{background:var(--paper);font-size:clamp(17px,1.7vw,20px)}
+.why p{margin:0}
+.ask{border:1.5px dashed var(--line);border-radius:12px;padding:14px 18px;color:var(--dim)}
+.ask b{color:var(--ink)}
+.pager{display:flex;justify-content:space-between;gap:8px;margin-top:6px}
+.check{max-width:900px;padding:24px max(4vw,16px) 40px}
+.check h2{font-size:26px;margin:0 0 6px}
+.check>p{color:var(--dim);margin:0 0 18px}
+.check ol{padding:0;margin:0;list-style:none;counter-reset:c}
+.check li{counter-increment:c;display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;padding:14px 0;border-top:1px solid var(--line)}
+.check li::before{content:counter(c);font:600 28px/1 "Source Serif 4",serif;color:var(--red)}
+.check li b{display:block;font-size:19px}
+.check li span{color:var(--dim)}
+.note{color:var(--dim);font-size:14px;padding:0 max(4vw,16px) 30px}
+@media(max-width:820px){.wrap{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:no-preference){.panel.on{animation:in .25s ease}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Laboratorio di revisione per la prima prova</h1>
+  <p>Per ogni argomento: si ripassa la regola, poi si lavora sulle frasi in tre passaggi (trovare l'errore, correggerlo, spiegare perché è un errore) e si chiude con una frase scritta dalla classe.</p>
+</header>
+<nav id="tabs" role="tablist" aria-label="Argomenti"></nav>
+<main id="main"></main>
+<p class="note">Frecce ← → per cambiare frase; barra spaziatrice per il passaggio successivo.</p>
+
+<script>
+{
+/* [..] = errore nella frase; {..} = parte corretta */
+const units=[
+ {n:"Ortografia e morfologia",r:[
+  "<b>Troncamento</b> e <b>elisione</b>: <i>qual è</i>, <i>un po'</i> (apocope di «poco»: apostrofo, mai accento).",
+  "<b>Accenti</b>: <i>perché, poiché, affinché</i> hanno l'accento acuto. <i>Sé</i> si accenta solo come pronome tonico («pensa a sé»), non in «se ne andò».",
+  "<b>H</b> del verbo avere: <i>ho, hai, ha, hanno</i>.",
+  "<b>Gli/le</b>: «gli» = a lui (e, ormai accettato, a loro); «le» = a lei.",
+  "<b>Accordo</b>: <i>ognuno, ciascuno, nessuno</i> vogliono il verbo al singolare."],
+  q:[
+  {t:"Ci sono 2 errori.",x:"[Qual'è] la traccia che hai scelto? Io ho ancora [un'pò] di dubbi.",a:"{Qual è} la traccia che hai scelto? Io ho ancora {un po'} di dubbi.",w:"«Qual è» è un troncamento, non un'elisione: niente apostrofo. «Po'» è la forma ridotta di «poco»: vuole l'apostrofo e non l'accento; «un» davanti a maschile non si apostrofa."},
+  {t:"Ci sono 2 errori.",x:"Ieri ho visto Maria e [gli] ho detto che lei [a] ragione.",a:"Ieri ho visto Maria e {le} ho detto che lei {ha} ragione.",w:"Riferito a una donna il pronome è «le». «Ha» è voce del verbo avere e vuole l'h; «a» senza h è una preposizione."},
+  {t:"Ci sono 2 errori di accento.",x:"Se ne andò senza salutare [perchè] [sè] la prese con tutti.",a:"Se ne andò senza salutare {perché} {se} la prese con tutti.",w:"«Perché» ha l'accento acuto (é chiusa). «Se» qui è un pronome atono, unito a «la»: non si accenta."},
+  {t:"Ci sono 2 errori.",x:"Ognuno dei candidati [hanno] consegnato il [propio] elaborato.",a:"Ognuno dei candidati {ha} consegnato il {proprio} elaborato.",w:"Il soggetto è «ognuno», singolare: «dei candidati» è un complemento e non decide l'accordo. «Proprio» ha due r."}],
+  p:"Scrivete una frase che contenga correttamente «qual è», «un po'» e «sé»."},
+ {n:"Punteggiatura",r:[
+  "<b>Mai la virgola</b> tra soggetto e verbo, né tra verbo e complemento oggetto, anche se il soggetto è lungo.",
+  "<b>Gli incisi</b> (apposizioni, subordinate inserite) si aprono e si chiudono: due virgole, non una.",
+  "<b>Relative</b>: con le virgole sono <i>esplicative</i> (valgono per tutti); senza virgole sono <i>restrittive</i> (selezionano una parte).",
+  "<b>Punto e virgola</b> per separare blocchi di senso, soprattutto se contengono già virgole o se il discorso cambia direzione (tuttavia, invece).",
+  "Di norma la <b>virgola</b> va prima di <i>ma, però, quindi</i> quando collegano due frasi."],
+  q:[
+  {t:"C'è una virgola di troppo.",x:"Gli studenti che hanno studiato con costanza[,] supereranno senza problemi la seconda prova.",a:"Gli studenti che hanno studiato con costanza supereranno senza problemi la seconda prova.",w:"Il soggetto è tutto «Gli studenti che hanno studiato con costanza»: anche se è lungo, non si separa dal verbo con la virgola."},
+  {t:"Mancano due virgole.",x:"Nel Novecento Ungaretti[ ]poeta della Grande guerra[ ]scrive versi brevissimi.",a:"Nel Novecento Ungaretti{, }poeta della Grande guerra{, }scrive versi brevissimi.",w:"«Poeta della Grande guerra» è un'apposizione, cioè un inciso: va chiusa tra due virgole. L'errore più frequente è aprire la virgola e non chiuderla."},
+  {t:"Che differenza di significato c'è tra le due frasi?",x:"1) I candidati[, che erano preparati,] hanno superato l'esame.\n2) I candidati [che erano preparati] hanno superato l'esame.",a:"1) {Tutti} i candidati erano preparati, e {tutti} hanno superato l'esame.\n2) {Solo} i candidati preparati hanno superato l'esame.",w:"Nella prima la relativa è esplicativa: aggiunge un'informazione su tutto il gruppo. Nella seconda è restrittiva: individua una parte del gruppo. La punteggiatura cambia il senso, non solo il ritmo."},
+  {t:"Punteggia il periodo.",x:"Verga aderisce al Verismo[ ]quindi adotta l'impersonalità[ ]tuttavia il suo pessimismo traspare ovunque[ ]",a:"Verga aderisce al Verismo{,} quindi adotta l'impersonalità{;} tuttavia il suo pessimismo traspare ovunque{.}",w:"Virgola prima di «quindi», che introduce una conseguenza; punto e virgola (o punto) prima di «tuttavia», perché il discorso cambia direzione; punto finale. Una virgola dopo «tuttavia» è possibile ma non obbligatoria."}],
+  p:"Scrivete una frase su un autore studiato che contenga un'apposizione correttamente chiusa tra due virgole."},
+ {n:"Congiuntivo e consecutio",r:[
+  "<b>Congiuntivo</b> dopo i verbi di opinione, volontà, speranza, timore, dubbio: <i>penso che sia</i>, <i>spero che venga</i>.",
+  "<b>Periodo ipotetico</b>: realtà (se + indicativo); possibilità (se + cong. imperfetto → condiz. presente); irrealtà nel passato (se + cong. trapassato → condiz. passato).",
+  "Dopo il <b>«se» ipotetico</b> non va mai il condizionale.",
+  "<b>Reggente al passato</b>: contemporaneità → cong. imperfetto; anteriorità → cong. trapassato; posteriorità → condizionale passato."],
+  q:[
+  {t:"Correggi il verbo.",x:"Penso che Leopardi [è] il poeta più pessimista dell'Ottocento.",a:"Penso che Leopardi {sia} il poeta più pessimista dell'Ottocento.",w:"«Penso» esprime un'opinione, non un fatto certo: la subordinata vuole il congiuntivo."},
+  {t:"Correggi il verbo.",x:"Se l'[avrei saputo] prima, avrei studiato di più.",a:"Se l'{avessi saputo} prima, avrei studiato di più.",w:"È un periodo ipotetico dell'irrealtà nel passato: «se» + congiuntivo trapassato, conseguenza al condizionale passato."},
+  {t:"Correggi il verbo: attenzione al tempo.",x:"Credevo che Verga [scrive] I Malavoglia prima di Mastro-don Gesualdo.",a:"Credevo che Verga {avesse scritto} I Malavoglia prima di Mastro-don Gesualdo.",w:"La reggente è al passato («credevo») e l'azione della subordinata è anteriore: congiuntivo trapassato. (I Malavoglia è del 1881, Mastro-don Gesualdo del 1889.)"},
+  {t:"Completa con i verbi tra parentesi.",x:"Se il professore me lo [______ (spiegare)] ieri, oggi lo [______ (sapere)].",a:"Se il professore me lo {avesse spiegato} ieri, oggi lo {saprei}.",w:"Periodo ipotetico misto: la condizione riguarda il passato (congiuntivo trapassato), la conseguenza il presente (condizionale presente)."}],
+  p:"Scrivete un periodo ipotetico dell'irrealtà su un personaggio letterario («Se Renzo non…»)."},
+ {n:"Pronomi e relativi",r:[
+  "Il <b>«che»</b> relativo vale solo come soggetto o complemento oggetto. Con una preposizione serve <b>«cui»</b>: <i>di cui, a cui, in cui</i>.",
+  "Per il possesso: <b>il cui, la cui, i cui, le cui</b>.",
+  "Evitare il <b>«che» polivalente</b> del parlato: «un poeta che le sue poesie…».",
+  "Evitare i <b>pleonasmi</b>: «a me mi», «di questo ne parleremo».",
+  "<b>Gli</b> = a lui / a loro (accettato); <b>le</b> = a lei; <b>loro</b> nel registro più formale."],
+  q:[
+  {t:"Correggi il relativo.",x:"Il romanzo [che] ti ho parlato è di Pirandello.",a:"Il romanzo {di cui} ti ho parlato è di Pirandello.",w:"Si parla «di» qualcosa: la preposizione va espressa, e «che» non può reggerla."},
+  {t:"Togli quello che è di troppo.",x:"[A me mi] ha colpito molto la figura di Mattia Pascal.",a:"{Mi} ha colpito molto la figura di Mattia Pascal. (oppure: {A me} ha colpito…)",w:"«A me» e «mi» indicano la stessa persona: tenerli entrambi è un pleonasmo, tollerato nel parlato ma non nello scritto."},
+  {t:"Una delle due frasi è sbagliata. Quale?",x:"1) Ho incontrato la prof e [gli] ho chiesto la data dell'interrogazione.\n2) Ho incontrato i compagni e gli ho detto dell'interrogazione.",a:"1) Ho incontrato la prof e {le} ho chiesto la data dell'interrogazione.\n2) Corretta (più formale: «ho detto {loro}»).",w:"«Gli» riferito a una donna è un errore. «Gli» per «a loro» è ormai accettato nell'italiano standard; nel registro più sorvegliato si può usare «loro»."},
+  {t:"Riscrivi correttamente.",x:"Montale è un poeta [che le sue] poesie parlano del male di vivere.",a:"Montale è un poeta {le cui} poesie parlano del male di vivere.",w:"Il possesso nella relativa si esprime con «il cui / la cui / i cui / le cui», con l'articolo accordato a ciò che è posseduto («le poesie»)."}],
+  p:"Scrivete una frase su un autore usando «in cui» e una usando «la cui» (o «il cui»)."},
+ {n:"Connettivi e coesione",r:[
+  "Ogni connettivo dice <b>che rapporto</b> c'è tra due frasi: aggiunta (inoltre), contrasto (tuttavia), causa (infatti, poiché), conseguenza (quindi), concessione (sebbene).",
+  "<b>Infatti</b> introduce una spiegazione o una prova di ciò che si è appena detto: non è un rafforzativo.",
+  "<b>Piuttosto che</b> = «anziché». Non significa «oppure».",
+  "<b>Sebbene, benché, nonostante</b> vogliono il congiuntivo.",
+  "<b>D eufonica</b> solo davanti alla stessa vocale: <i>ed ecco, ad Ancona</i>; ma <i>e infine, a un tratto</i>."],
+  q:[
+  {t:"Scegli il connettivo: quindi, tuttavia o infatti?",x:"Svevo scrive in un italiano poco elegante; [______] La coscienza di Zeno è un capolavoro.",a:"Svevo scrive in un italiano poco elegante; {tuttavia} La coscienza di Zeno è un capolavoro.",w:"Le due affermazioni sono in contrasto: serve un connettivo avversativo. «Quindi» introdurrebbe una conseguenza, «infatti» una spiegazione."},
+  {t:"Che cosa non va?",x:"Alla prima prova puoi scegliere la tipologia A [piuttosto che] la B [piuttosto che] la C.",a:"Alla prima prova puoi scegliere la tipologia A{,} la B {o} la C.",w:"«Piuttosto che» esprime una preferenza («preferisco la A piuttosto che la B»). Per elencare alternative si usa «o, oppure»."},
+  {t:"Quali «d» eufoniche vanno tolte?",x:"Ed ecco che [ad un] tratto [ed improvvisamente] arrivammo ad Ancona.",a:"Ed ecco che {a un} tratto {e improvvisamente} arrivammo ad Ancona.",w:"«Ed ecco» e «ad Ancona» sono corretti (stessa vocale). Le altre due vanno tolte. Nota anche la ridondanza: «a un tratto» e «improvvisamente» dicono la stessa cosa."},
+  {t:"Unisci le due frasi in un solo periodo con «sebbene».",x:"Pascoli usa parole semplici. Le sue poesie sono piene di simboli.",a:"{Sebbene} Pascoli {usi} parole semplici, le sue poesie sono piene di simboli.",w:"«Sebbene» introduce una subordinata concessiva e regge il congiuntivo («usi», non «usa»)."}],
+  p:"Scrivete tre frasi sullo stesso autore collegate da un connettivo causale, uno avversativo e uno conclusivo."},
+ {n:"Registro formale",r:[
+  "Sostituire le <b>parole generiche</b> (cosa, fare, mettere, tipo, roba) con il termine preciso: tema, motivo, scelta stilistica, personaggio.",
+  "Evitare gli <b>intensivi del parlato</b>: super, troppo (per «molto»), tantissimo.",
+  "Niente <b>«io personalmente»</b>: basta «ritengo», o la tesi enunciata direttamente.",
+  "Spezzare le <b>catene di «che»</b> con aggettivi, participi, subordinate implicite.",
+  "Evitare le <b>ripetizioni</b> con sinonimi, pronomi o riformulazioni."],
+  q:[
+  {t:"Riscrivi in un registro adatto a un tema.",x:"[Tipo,] Ungaretti scrive poesie [super corte].",a:"Ungaretti scrive poesie {brevissime, ridotte all'essenziale}.",w:"«Tipo» è un riempitivo del parlato; «super» è un intensivo colloquiale. Meglio un aggettivo preciso, che dica anche qualcosa sullo stile."},
+  {t:"Elimina le parole generiche.",x:"La [cosa] più importante del romanzo è la [cosa] della memoria.",a:"Il {tema centrale} del romanzo è la memoria.",w:"«Cosa» non dice nulla: va sostituita con il termine dell'analisi letteraria adatto (tema, motivo, personaggio, scelta stilistica…)."},
+  {t:"Gli errori sono almeno quattro.",x:"[Io personalmente] penso che la guerra [è] una [cosa brutta] e [infatti] anche Ungaretti [lo dice].",a:"{Ritengo} che la guerra {sia} un'{esperienza disumana}, {come testimonia} anche Ungaretti.",w:"«Io personalmente» è un pleonasmo; dopo «penso che» serve il congiuntivo; «cosa brutta» è generico; «infatti» non introduce una spiegazione; «lo dice» è vago."},
+  {t:"Spezza la catena di «che».",x:"Nel brano, [che è] di Verga, ci sono [tanti] personaggi [che sono] poveri e [che lavorano tanto] e [che non riescono] a cambiare la loro vita.",a:"Il brano di Verga presenta {numerosi} personaggi poveri, {costretti} a un lavoro estenuante e {incapaci} di sottrarsi alla propria condizione.",w:"Quattro relative di seguito e «tanti/tanto» ripetuto. Le relative diventano aggettivi e participi («poveri», «costretti», «incapaci»): la frase è più breve e più precisa."}],
+  p:"Prendete una frase da un vostro tema recente e riscrivetela alla lavagna in registro formale."}
+];
+const checklist=[
+ ["Ogni periodo ha un verbo principale?","Rileggi le frasi lunghe: spesso iniziano con una subordinata e non arrivano mai alla principale."],
+ ["Ci sono virgole tra soggetto e verbo?","Cerca il soggetto di ogni frase e controlla che non sia separato dal suo verbo."],
+ ["Gli incisi sono chiusi?","Ogni virgola che apre un inciso deve avere la sua virgola di chiusura."],
+ ["Dopo «penso che», «credo che», «sebbene» c'è il congiuntivo?","E dopo il «se» ipotetico non c'è mai il condizionale."],
+ ["I tempi verbali sono coerenti?","Scegli presente o passato per parlare dell'opera e mantienilo."],
+ ["I relativi sono giusti?","«Che» solo come soggetto e oggetto; con la preposizione «cui»; per il possesso «il cui»."],
+ ["«Gli» è riferito a un uomo o a più persone?","Per una donna serve «le»."],
+ ["I connettivi dicono il rapporto giusto?","«Infatti» deve introdurre una spiegazione; «quindi» una conseguenza; «tuttavia» un contrasto."],
+ ["Ci sono parole generiche o del parlato?","Cosa, tipo, fare, super, troppo, io personalmente: sostituiscile."],
+ ["Ortografia delle parole a rischio","Qual è, un po', perché, sé/se, né/ne, ha/a, po', accenti sulle maiuscole (È)."]
+];
+const $=id=>document.getElementById(id);
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const plain=s=>esc(s.replace(/\[(.*?)\]/g,(m,t)=>t.replace(/^ $/,' ')));
+const marked=s=>esc(s).replace(/\[(.*?)\]/g,(m,t)=>`<span class="err">${t===' '?'&nbsp;∧&nbsp;':t}</span>`);
+const fixed=s=>esc(s).replace(/\{(.*?)\}/g,'<span class="fix">$1</span>');
+let u=0,i=0,step=0;
+const tabs=[...units.map(x=>x.n),'Checklist di revisione'];
+const drawTabs=()=>{$('tabs').innerHTML=tabs.map((t,k)=>`<button role="tab" aria-selected="${k===u}" data-u="${k}">${esc(t)}</button>`).join('')};
+const draw=()=>{
+  drawTabs();
+  if(u===units.length){
+    $('main').innerHTML=`<section class="check"><h2>Prima di consegnare: dieci controlli</h2><p>Da fare sulla brutta copia, uno alla volta, rileggendo il testo dall'inizio per ogni controllo.</p><ol>${checklist.map(c=>`<li><div><b>${esc(c[0])}</b><span>${esc(c[1])}</span></div></li>`).join('')}</ol></section>`;
+    return;
+  }
+  const U=units[u],last=i===U.q.length;
+  let right;
+  if(last){
+    right=`<p class="count">Produzione</p><p class="task">Ora scrivete voi</p><p class="sent">${esc(U.p)}</p><div class="ask"><b>Alla lavagna:</b> due o tre studenti scrivono la loro frase; la classe la rilegge applicando la regola a sinistra.</div>`;
+  }else{
+    const q=U.q[i];
+    right=`<p class="count">Frase ${i+1} di ${U.q.length}</p>
+    <p class="task">${esc(q.t)}</p>
+    <p class="sent">${step>=1?marked(q.x):plain(q.x)}</p>
+    <div class="steps">
+      <button data-s="1" class="${step>=1?'done':''}">1. Dov'è l'errore?</button>
+      <button data-s="2" class="${step>=2?'done':''}" ${step<1?'disabled':''}>2. Correzione</button>
+      <button data-s="3" class="${step>=3?'done':''}" ${step<2?'disabled':''}>3. Perché</button>
+    </div>
+    <div class="panel corr ${step>=2?'on':''}"><h3>Correzione</h3><p class="sent">${fixed(q.a)}</p></div>
+    <div class="panel why ${step>=3?'on':''}"><h3>La regola applicata</h3><p>${esc(q.w)}</p></div>
+    ${step===0?'<div class="ask"><b>Prima di cliccare:</b> la classe individua l\'errore e prova a correggerlo alla lavagna.</div>':''}`;
+  }
+  $('main').innerHTML=`<div class="wrap"><aside class="rule"><h2>La regola</h2><ul>${U.r.map(x=>`<li>${x}</li>`).join('')}</ul></aside>
+  <section class="ex">${right}<div class="pager"><button id="prev" ${i===0?'disabled':''}>← Frase precedente</button><button id="next" ${last?'disabled':''}>${i===U.q.length-1?'Esercizio di scrittura →':'Frase successiva →'}</button></div></section></div>`;
+};
+const go=d=>{const U=units[u];if(!U)return;const n=i+d;if(n<0||n>U.q.length)return;i=n;step=0;draw()};
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('[data-u]');if(b){u=+b.dataset.u;i=0;step=0;draw();try{localStorage.setItem('labrev',u)}catch(x){}}});
+$('main').addEventListener('click',e=>{
+  const s=e.target.closest('[data-s]');if(s){step=Math.max(step,+s.dataset.s);draw();return}
+  if(e.target.id==='prev')go(-1);if(e.target.id==='next')go(1);
+});
+document.addEventListener('keydown',e=>{
+  if(e.target.closest&&e.target.closest('input,textarea'))return;
+  if(e.key==='ArrowRight')go(1);else if(e.key==='ArrowLeft')go(-1);
+  else if(e.key===' '&&units[u]&&i<units[u].q.length){e.preventDefault();step=Math.min(3,step+1);draw()}
+});
+try{const s=+localStorage.getItem('labrev');if(s>=0&&s<tabs.length)u=s}catch(x){}
+draw();
+}
+</script>
+</body>
+</html>
